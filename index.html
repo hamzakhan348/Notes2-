@@ -1699,8 +1699,24 @@
                 scheduleSave();
             }
 
-            init();
-        })();
-    </script>
+                    const downloadBtn = $('#downloadBtn');
+
+        downloadBtn.addEventListener('click', () => {
+            const dataStr = JSON.stringify(state, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `notefolio-backup-${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        init();
+    })();
+</script>
 </body>
 </html>
