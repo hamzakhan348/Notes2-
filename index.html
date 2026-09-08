@@ -391,28 +391,31 @@
         }
 
         .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-            background: var(--bg);
-            position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--bg);
+    position: relative;
+    min-height: 0;
         }
-
-        .editor-toolbar {
-            height: var(--toolbar-height);
-            background: var(--sidebar-bg);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 0 12px;
-            flex-shrink: 0;
-            overflow-x: auto;
-            scrollbar-width: none;
-            z-index: 20;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-        }
+        
+     .editor-toolbar {
+    height: var(--toolbar-height);
+    background: var(--sidebar-bg);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    z-index: 100;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    position: sticky;
+    top: var(--header-height);
+     }
         .editor-toolbar::-webkit-scrollbar {
             display: none;
         }
