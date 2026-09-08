@@ -768,15 +768,18 @@
 
         /* ─── Mobile Overlay ─── */
         .sidebar-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.3);
-            z-index: 45;
-            display: none;
-        }
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;                       /* just below sidebar */
+    display: none;
+}
+.sidebar-backdrop.visible {
+    display: block;
+}
         .sidebar-backdrop.visible {
             display: block;
         }
@@ -787,17 +790,21 @@
                 --sidebar-width: 260px;
             }
             .sidebar {
-                position: fixed;
-                top: var(--header-height);
-                left: 0;
-                bottom: 0;
-                z-index: 60;
-                transform: translateX(0);
-                transition: transform 0.3s ease;
-            }
-            .sidebar.hidden {
-                transform: translateX(-100%);
-                margin-left: 0;
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    bottom: 0;
+    width: var(--sidebar-width);
+    z-index: 1000;                      /* higher than header to avoid overlap issues */
+    transform: translateX(-100%);       /* hidden by default */
+    transition: transform 0.3s ease;
+}
+.sidebar.hidden {
+    transform: translateX(-100%);
+}
+.sidebar:not(.hidden) {
+    transform: translateX(0);
+}
             }
             .paper {
                 padding: 32px 24px;
@@ -1644,17 +1651,21 @@
             });
 
             function toggleSidebar() {
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.toggle('hidden');
-                    sidebarBackdrop.classList.toggle('visible', !sidebar.classList.contains('hidden'));
-                } else {
-                    sidebar.classList.toggle('hidden');
-                }
-            }
+    if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('hidden');
+        if (!sidebar.classList.contains('hidden')) {
+            sidebarBackdrop.classList.add('visible');
+        } else {
+            sidebarBackdrop.classList.remove('visible');
+        }
+    } else {
+        sidebar.classList.toggle('hidden');
+    }
+}
 
             function closeSidebar() {
-                sidebar.classList.add('hidden');
-                sidebarBackdrop.classList.remove('visible');
+    sidebar.classList.add('hidden');
+    sidebarBackdrop.classList.remove('visible');
             }
 
             sidebarToggle.addEventListener('click', toggleSidebar);
@@ -1772,7 +1783,7 @@ downloadBtn.addEventListener('click', () => {
                             clonedEl.style.top = '0';
                         }
                     }
-                }).then(canvas => {
+                                }).then(canvas => {
                     const imgData = canvas.toDataURL('image/jpeg', 0.98);
                     const { jsPDF } = window.jspdf;
                     const pdf = new jsPDF('p', 'mm', 'a4');
@@ -1788,8 +1799,16 @@ downloadBtn.addEventListener('click', () => {
                 });
             });
 
+            const fab = document.getElementById('fabAddNote');
+            if (fab) {
+                fab.addEventListener('click', () => {
+                    addNoteBtn.click();
+                });
+            }
+
             init();
         })();
     </script>
+    <button id="fabAddNote" class="fab">+</button>
 </body>
 </html>
