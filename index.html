@@ -892,6 +892,8 @@
             }
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -1698,48 +1700,59 @@
                 });
                 scheduleSave();
             }
+            const downloadBtn = $('#downloadBtn');
 
-                    const downloadBtn = $('#downloadBtn');
+            downloadBtn.addEventListener('click', () => {
+                const note = getActiveNote();
+                const subject = getActiveSubject();
+                if (!note || !subject) {
+                    alert('No note selected.');
+                    return;
+                }
 
-downloadBtn.addEventListener('click', () => {
-    const note = getActiveNote();
-    const subject = getActiveSubject();
-    if (!note || !subject) {
-        alert('No note selected.');
-        return;
-    }
+                const element = document.createElement('div');
+                element.style.width = '210mm';
+                element.style.padding = '20mm';
+                element.style.fontFamily = 'Georgia, "Times New Roman", serif';
+                element.style.fontSize = '12pt';
+                element.style.lineHeight = '1.6';
+                element.style.color = '#1a1a1a';
+                element.style.background = '#ffffff';
+                element.innerHTML = `
+                    <h1 style="color:${subject.color}; border-bottom:2px solid #e2e5ea; padding-bottom:10px;">
+                        ${subject.icon || ''} ${note.title}
+                    </h1>
+                    <p style="color:#9ca3af; font-size:0.8em; margin-bottom:20px;">
+                        Subject: ${subject.name} | Last updated: ${new Date(note.updatedAt).toLocaleString()}
+                    </p>
+                    <div>${note.content || '<p><em>Empty note</em></p>'}</div>
+                `;
+                document.body.appendChild(element);
 
-    const element = document.createElement('div');
-    element.style.width = '210mm';
-    element.style.padding = '20mm';
-    element.style.fontFamily = 'Georgia, "Times New Roman", serif';
-    element.style.fontSize = '12pt';
-    element.style.lineHeight = '1.6';
-    element.style.color = '#1a1a1a';
-    element.style.background = '#ffffff';
+                html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                    pdf.save(`${note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+                    document.body.removeChild(element);
+                }).catch(error => {
+                    console.error('PDF generation error:', error);
+                    alert('Could not generate PDF. Please try again.');
+                    document.body.removeChild(element);
+                });
+            });
 
-    element.innerHTML = `
-        <h1 style="color:${subject.color}; border-bottom:2px solid #e2e5ea; padding-bottom:10px;">
-            ${subject.icon || ''} ${note.title}
-        </h1>
-        <p style="color:#9ca3af; font-size:0.8em; margin-bottom:20px;">
-            Subject: ${subject.name} | Last updated: ${new Date(note.updatedAt).toLocaleString()}
-        </p>
-        <div>${note.content || '<p><em>Empty note</em></p>'}</div>
-    `;
-
-    const opt = {
-        margin:        [10, 10, 10, 10],
-        filename:      `${note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
-        image:         { type: 'jpeg', quality: 0.98 },
-        html2canvas:   { scale: 2, useCORS: true },
-        jsPDF:         { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(element).save();
-});
-        init();
-    })();
-</script>
+            init();
+        })();
+    </script>
 </body>
 </html>
+                    
