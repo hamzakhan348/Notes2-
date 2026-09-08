@@ -1718,6 +1718,16 @@ downloadBtn.addEventListener('click', () => {
         return;
     }
 
+    const downloadBtn = $('#downloadBtn');
+
+downloadBtn.addEventListener('click', () => {
+    const note = getActiveNote();
+    const subject = getActiveSubject();
+    if (!note || !subject) {
+        alert('No note selected.');
+        return;
+    }
+
     const element = document.createElement('div');
     element.style.width = '210mm';
     element.style.padding = '20mm';
@@ -1726,11 +1736,6 @@ downloadBtn.addEventListener('click', () => {
     element.style.lineHeight = '1.6';
     element.style.color = '#1a1a1a';
     element.style.background = '#ffffff';
-    element.style.margin = '0';
-    element.style.overflow = 'visible';
-    element.style.position = 'absolute';
-    element.style.left = '-9999px';
-    element.style.top = '0';
     element.innerHTML = `
         <h1 style="color:${subject.color}; border-bottom:2px solid #e2e5ea; padding-bottom:10px;">
             ${subject.icon || ''} ${note.title}
@@ -1742,26 +1747,11 @@ downloadBtn.addEventListener('click', () => {
     `;
     document.body.appendChild(element);
 
-    const fullWidth = element.scrollWidth;
-    const fullHeight = element.scrollHeight;
-
     html2canvas(element, {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff',
-        width: fullWidth,
-        height: fullHeight,
-        windowWidth: fullWidth,
-        windowHeight: fullHeight,
-        onclone: (clonedDoc) => {
-            const clonedEl = clonedDoc.body.firstElementChild;
-            if (clonedEl) {
-                clonedEl.style.position = 'relative';
-                clonedEl.style.left = '0';
-                clonedEl.style.top = '0';
-            }
-        }
+        backgroundColor: '#ffffff'
     }).then(canvas => {
         const imgData = canvas.toDataURL('image/jpeg', 0.98);
         const { jsPDF } = window.jspdf;
