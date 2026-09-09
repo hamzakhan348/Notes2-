@@ -1515,4 +1515,362 @@
                 renderNotesList();
             }
         }
-        
+                    insertImageBtn.addEventListener('click', () => {
+                ensureActiveNote();
+                imageFileInput.click();
+            });
+
+            imageFileInput.addEventListener('change', () => {
+                const file = imageFileInput.files[0];
+                if (file) insertImageFile(file);
+                imageFileInput.value = '';
+            });
+
+            editorScrollArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                editorScrollArea.style.backgroundColor = '#f0f4ff';
+            });
+            editorScrollArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                editorScrollArea.style.backgroundColor = '';
+            });
+            editorScrollArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                editorScrollArea.style.backgroundColor = '';
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].type.startsWith('image/')) {
+                    ensureActiveNote();
+                    insertImageFile(files[0]);
+                }
+            });
+
+            function insertImageFile(file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('Image is too large. Please choose an image under 2MB.');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imgSrc = e.target.result;
+                    editor.focus();
+                    const sel = window.getSelection();
+                    let range;
+                    if (sel.rangeCount > 0) {
+                        range = sel.getRangeAt(0);
+                    } else {
+                        range = document.createRange();
+                        range.selectNodeContents(editor);
+                        range.collapse(false);
+                    }
+                    const img = document.createElement('img');
+                    img.src = imgSrc;
+                    img.alt = 'Embedded image';
+                    img.style.maxWidth = '100%';
+                    range.deleteContents();
+                    range.insertNode(img);
+                    range.setStartAfter(img);
+                    range.collapse(true);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    updateNoteContent();
+                };
+                reader.readAsDataURL(file);
+            }
+
+            editor.addEventListener('dblclick', (e) => {
+                const target = e.target;
+                if (target.tagName === 'IMG') {
+                    const newWidth = prompt('Enter image width (e.g., 100%, 300px, 50%):', target.style.width || '100%');
+                    if (newWidth !== null) {
+                        target.style.width = newWidth;
+                        updateNoteContent();
+                    }
+                }
+            });
+
+            addNoteBtn.addEventListener('click', () => {
+                if (!getActiveSubject()) {
+                    alert('No subject selected.');
+                    return;
+                }
+                newNoteModal.classList.add('visible');
+                newNoteTitleInput.value = '';
+                newNoteTitleInput.focus();
+            });
+
+            cancelNewNoteBtn.addEventListener('click', () => {
+                newNoteModal.classList.remove('visible');
+            });
+
+            confirmNewNoteBtn.addEventListener('click', () => {
+                const subject = getActiveSubject();
+                if (!subject) return;
+                const title = newNoteTitleInput.value.trim() || 'Untitled note';
+                const note = {
+                    id: generateId(),
+                    title: title,
+                    content: '',
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                };
+                if (!subject.notes) subject.notes = [];
+                subject.notes.unshift(note);
+                state.activeNoteId = note.id;
+                newNoteModal.classList.remove('visible');
+                renderSubjects();
+                renderNotesList();
+                loadActiveNote();
+                scheduleSave();
+                editor.focus();
+            });
+
+            newNoteTitleInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmNewNoteBtn.click();
+                }
+            });
+
+            newNoteModal.addEventListener('click', (e) => {
+                if (e.target === newNoteModal) newNoteModal.classList.remove('visible');
+            });
+            editSubjectModal.addEventListener('click', (e) => {
+                if (e.target === editSubjectModal) editSubjectModal.classList.remove('visible');
+            });
+
+            function openEditSubjectModal(subjectId) {
+                const subject = state.subjects.find(s => s.id === subjectId);
+                if (!subject) return;
+                editingSubjectId = subjectId;
+                selectedSubjectColor = subject.color || SUBJECT_COLORS[0];
+                editSubjectNameInput.value = subject.name;
+                renderSubjectColorOptions();
+                editSubjectModal.classList.add('visible');
+                editSubjectNameInput.focus();
+            }
+
+            function renderSubjectColorOptions() {
+                subjectColorOptions.innerHTML = '';
+                SUBJECT_COLORS.forEach(color => {
+                    const div = document.createElement('div');
+                    div.className = 'color-option' + (color === selectedSubjectColor ? ' selected' : '');
+                    div.style.background = color;
+                    div.dataset.color = color;
+                    div.addEventListener('click', () => {
+                        selectedSubjectColor = color;
+                        renderSubjectColorOptions();
+                    });
+                    subjectColorOptions.appendChild(div);
+                });
+            }
+
+            cancelEditSubjectBtn.addEventListener('click', () => {
+                editSubjectModal.classList.remove('visible');
+                editingSubjectId = null;
+            });
+
+            confirmEditSubjectBtn.addEventListener('click', () => {
+                if (!editingSubjectId) return;
+                const subject = state.subjects.find(s => s.id === editingSubjectId);
+                if (!subject) return;
+                const name = editSubjectNameInput.value.trim();
+                if (name) subject.name = name;
+                subject.color = selectedSubjectColor;
+                editSubjectModal.classList.remove('visible');
+                editingSubjectId = null;
+                renderSubjects();
+                scheduleSave();
+            });
+
+            editSubjectNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmEditSubjectBtn.click();
+                }
+            });
+
+            function toggleSidebar() {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.toggle('hidden');
+                    if (!sidebar.classList.contains('hidden')) {
+                        sidebarBackdrop.classList.add('visible');
+                    } else {
+                        sidebarBackdrop.classList.remove('visible');
+                    }
+                } else {
+                    sidebar.classList.toggle('hidden');
+                }
+            }
+
+            function closeSidebar() {
+                sidebar.classList.add('hidden');
+                sidebarBackdrop.classList.remove('visible');
+            }
+
+            sidebarToggle.addEventListener('click', toggleSidebar);
+            sidebarBackdrop.addEventListener('click', closeSidebar);
+
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 768) {
+                    sidebar.classList.remove('hidden');
+                    sidebarBackdrop.classList.remove('visible');
+                } else {
+                    sidebar.classList.add('hidden');
+                    sidebarBackdrop.classList.remove('visible');
+                }
+            });
+
+            printBtn.addEventListener('click', () => {
+                saveState();
+                window.print();
+            });
+
+            // Direct PDF download (multi-page)
+            downloadBtn.addEventListener('click', () => {
+                const note = getActiveNote();
+                const subject = getActiveSubject();
+                if (!note || !subject) {
+                    alert('No note selected.');
+                    return;
+                }
+
+                const element = document.createElement('div');
+                element.style.width = '210mm';
+                element.style.padding = '20mm';
+                element.style.fontFamily = 'Georgia, "Times New Roman", serif';
+                element.style.fontSize = '12pt';
+                element.style.lineHeight = '1.6';
+                element.style.color = '#1a1a1a';
+                element.style.background = '#ffffff';
+                element.style.margin = '0';
+                element.style.overflow = 'visible';
+                element.style.position = 'absolute';
+                element.style.left = '-9999px';
+                element.style.top = '0';
+                element.innerHTML = `
+                    <h1 style="color:${subject.color}; border-bottom:2px solid #e2e5ea; padding-bottom:10px;">
+                        ${subject.icon || ''} ${note.title}
+                    </h1>
+                    <p style="color:#9ca3af; font-size:0.8em; margin-bottom:20px;">
+                        Subject: ${subject.name} | Last updated: ${new Date(note.updatedAt).toLocaleString()}
+                    </p>
+                    <div>${note.content || '<p><em>Empty note</em></p>'}</div>
+                `;
+                document.body.appendChild(element);
+
+                const fullWidth = element.scrollWidth;
+                const fullHeight = element.scrollHeight;
+
+                html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    width: fullWidth,
+                    height: fullHeight,
+                    windowWidth: fullWidth,
+                    windowHeight: fullHeight,
+                    onclone: (clonedDoc) => {
+                        const clonedEl = clonedDoc.body.firstElementChild;
+                        if (clonedEl) {
+                            clonedEl.style.position = 'relative';
+                            clonedEl.style.left = '0';
+                            clonedEl.style.top = '0';
+                        }
+                    }
+                }).then(canvas => {
+                    document.body.removeChild(element);
+                    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+                    const pxPerMm = canvas.width / pdfWidth;
+                    const pageHeightPx = pdfHeight * pxPerMm;
+
+                    let heightLeft = canvas.height;
+                    let position = 0;
+
+                    // First page
+                    const firstPageCanvas = document.createElement('canvas');
+                    firstPageCanvas.width = canvas.width;
+                    const firstPageCtx = firstPageCanvas.getContext('2d');
+                    firstPageCtx.fillStyle = '#ffffff';
+                    firstPageCtx.fillRect(0, 0, firstPageCanvas.width, Math.min(pageHeightPx, heightLeft));
+                    firstPageCtx.drawImage(canvas, 0, 0, canvas.width, Math.min(pageHeightPx, heightLeft), 0, 0, canvas.width, Math.min(pageHeightPx, heightLeft));
+                    const firstImgData = firstPageCanvas.toDataURL('image/jpeg', 0.98);
+                    pdf.addImage(firstImgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                    heightLeft -= pageHeightPx;
+                    position = pageHeightPx;
+
+                    while (heightLeft > 0) {
+                        pdf.addPage();
+                        const pageCanvas = document.createElement('canvas');
+                        pageCanvas.width = canvas.width;
+                        pageCanvas.height = Math.min(pageHeightPx, heightLeft);
+                        const ctx = pageCanvas.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+                        ctx.drawImage(canvas, 0, position, canvas.width, Math.min(pageHeightPx, heightLeft), 0, 0, canvas.width, Math.min(pageHeightPx, heightLeft));
+                        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.98);
+                        pdf.addImage(pageImgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                        heightLeft -= pageHeightPx;
+                        position += pageHeightPx;
+                    }
+
+                    pdf.save(`${note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+                }).catch(error => {
+                    console.error('PDF generation error:', error);
+                    alert('Could not generate PDF. Please try again.');
+                    document.body.removeChild(element);
+                });
+            });
+
+            // Floating action button (mobile)
+            const fab = document.getElementById('fabAddNote');
+            if (fab) {
+                fab.addEventListener('click', () => {
+                    addNoteBtn.click();
+                });
+            }
+
+            function init() {
+                loadState();
+                state.subjects.forEach(s => { if (!s.notes) s.notes = []; });
+                const activeSubject = getActiveSubject();
+                if (!activeSubject && state.subjects.length > 0) {
+                    state.activeSubjectId = state.subjects[0].id;
+                }
+                const subject = getActiveSubject();
+                if (subject && state.activeNoteId) {
+                    const noteExists = subject.notes?.some(n => n.id === state.activeNoteId);
+                    if (!noteExists) {
+                        state.activeNoteId = subject.notes?.length > 0 ? subject.notes[0].id : null;
+                    }
+                } else if (subject && subject.notes?.length > 0) {
+                    state.activeNoteId = subject.notes[0].id;
+                } else {
+                    state.activeNoteId = null;
+                }
+                renderSubjects();
+                renderNotesList();
+                loadActiveNote();
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.add('hidden');
+                    sidebarBackdrop.classList.remove('visible');
+                }
+                editor.setAttribute('contenteditable', 'true');
+                paper.addEventListener('click', (e) => {
+                    if (e.target === paper || e.target === editor) {
+                        editor.focus();
+                    }
+                });
+                scheduleSave();
+            }
+
+            init();
+        })();
+    </script>
+</body>
+</html>
